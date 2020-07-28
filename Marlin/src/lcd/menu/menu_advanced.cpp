@@ -16,7 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -187,6 +187,7 @@ void menu_cancelobject();
       #endif
     );
     queue.inject(cmd);
+    ui.return_to_status();
   }
 
 #endif // PID_AUTOTUNE_MENU
@@ -314,10 +315,7 @@ void menu_cancelobject();
         #undef PID_BED_MENU_SECTION
       #endif
       #if ENABLED(PID_AUTOTUNE_MENU)
-        #ifndef BED_OVERSHOOT
-          #define BED_OVERSHOOT 5
-        #endif
-        EDIT_ITEM_FAST_N(int3, -1, MSG_PID_AUTOTUNE_E, &autotune_temp_bed, PREHEAT_1_TEMP_BED, BED_MAXTEMP - BED_OVERSHOOT, []{ _lcd_autotune(-1); });
+        EDIT_ITEM_FAST_N(int3, -1, MSG_PID_AUTOTUNE_E, &autotune_temp_bed, PREHEAT_1_TEMP_BED, BED_MAX_TARGET, []{ _lcd_autotune(-1); });
       #endif
     #endif
 
