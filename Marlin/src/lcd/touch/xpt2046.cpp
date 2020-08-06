@@ -17,27 +17,27 @@
  *
  */
 
-#include "../../inc/MarlinConfigPre.h"
+#include "../../inc/MarlinConfig.h"
 
-#if ENABLED(TOUCH_BUTTONS)
+#if HAS_TOUCH_XPT2046
 
 #include "xpt2046.h"
-#include "../../inc/MarlinConfig.h"
-#if ENABLED(FSMC_GRAPHICAL_TFT)
-  #include "../../lcd/dogm/ultralcd_DOGM.h" // for LCD_FULL_PIXEL_WIDTH, etc.
+#include "../scaled_tft.h"
+
+#ifndef XPT2046_Z1_THRESHOLD
+  #define XPT2046_Z1_THRESHOLD 10
 #endif
 
-
-/*
+/**
  * Draw and Touch processing
  *
  *      LCD_PIXEL_WIDTH/HEIGHT (128x64) is the (emulated DOGM) Pixel Drawing resolution.
- *   TOUCH_SCREEN_WIDTH/HEIGHT (320x240) is the Touch Area resolution.
+ *   TOUCH_SENSOR_WIDTH/HEIGHT (320x240) is the Touch Area resolution.
  * LCD_FULL_PIXEL_WIDTH/HEIGHT (320x240 or 480x320) is the Actual (FSMC) Display resolution.
  *
  *  - All native (u8g) drawing is done in LCD_PIXEL_* (128x64)
  *  - The DOGM pixels are is upscaled 2-3x (as needed) for display.
- *  - Touch coordinates use TOUCH_SCREEN_* resolution and are converted to
+ *  - Touch coordinates use TOUCH_SENSOR_* resolution and are converted to
  *    click and scroll-wheel events (emulating of a common DOGM display).
  *
  *  TOUCH_SCREEN resolution exists to fit our calibration values. The original touch code was made
@@ -51,21 +51,25 @@
  * The Marlin screen touchable area starts at LCD_PIXEL_OFFSET_X/Y (translated to SCREEN_START_LEFT/TOP)
  * and spans LCD_PIXEL_WIDTH/HEIGHT (scaled to SCREEN_WIDTH/HEIGHT).
  */
-// Touch screen resolution independent of display resolution
-#define TOUCH_SCREEN_HEIGHT 240
-#define TOUCH_SCREEN_WIDTH 320
 
 // Coordinates in terms of touch area
 #define BUTTON_AREA_TOP 175
 #define BUTTON_AREA_BOT 234
 
-#define SCREEN_START_TOP  ((LCD_PIXEL_OFFSET_Y) * (TOUCH_SCREEN_HEIGHT) / (LCD_FULL_PIXEL_HEIGHT))
-#define SCREEN_START_LEFT ((LCD_PIXEL_OFFSET_X) * (TOUCH_SCREEN_WIDTH) / (LCD_FULL_PIXEL_WIDTH))
-#define SCREEN_HEIGHT     ((LCD_PIXEL_HEIGHT * FSMC_UPSCALE) * (TOUCH_SCREEN_HEIGHT) / (LCD_FULL_PIXEL_HEIGHT))
-#define SCREEN_WIDTH      ((LCD_PIXEL_WIDTH * FSMC_UPSCALE) * (TOUCH_SCREEN_WIDTH) / (LCD_FULL_PIXEL_WIDTH))
+// Touch sensor resolution independent of display resolution
+#define TOUCH_SENSOR_WIDTH  320
+#define TOUCH_SENSOR_HEIGHT 240
 
-#define TOUCHABLE_Y_HEIGHT  SCREEN_HEIGHT
+#define SCREEN_WIDTH_PCT(X) ((X) * (TOUCH_SENSOR_WIDTH) / (LCD_FULL_PIXEL_WIDTH))
+#define SCREEN_HEIGHT_PCT(Y) ((Y) * (TOUCH_SENSOR_HEIGHT) / (LCD_FULL_PIXEL_HEIGHT))
+
+#define SCREEN_START_LEFT SCREEN_WIDTH_PCT(LCD_PIXEL_OFFSET_X)
+#define SCREEN_START_TOP  SCREEN_HEIGHT_PCT(LCD_PIXEL_OFFSET_Y)
+#define SCREEN_WIDTH      SCREEN_WIDTH_PCT((LCD_PIXEL_WIDTH) * (FSMC_UPSCALE))
+#define SCREEN_HEIGHT     SCREEN_HEIGHT_PCT((LCD_PIXEL_HEIGHT) * (FSMC_UPSCALE))
+
 #define TOUCHABLE_X_WIDTH  SCREEN_WIDTH
+#define TOUCHABLE_Y_HEIGHT SCREEN_HEIGHT
 
 #ifndef TOUCH_INT_PIN
   #define TOUCH_INT_PIN  -1
@@ -117,9 +121,14 @@ uint8_t XPT2046::read_buttons() {
     // We rely on XPT2046 compatible mode to ADS7843, hence no Z1 and Z2 measurements possible.
 
     if (!isTouched()) return 0;
-    const uint16_t x = uint16_t(((uint32_t(getInTouch(XPT2046_X))) * tsoffsets[0]) >> 16) + tsoffsets[1],
-                  y = uint16_t(((uint32_t(getInTouch(XPT2046_Y))) * tsoffsets[2]) >> 16) + tsoffsets[3];
+    uint16_t x = uint16_t(((uint32_t(getInTouch(XPT2046_X))) * tsoffsets[0]) >> 16) + tsoffsets[1],
+             y = uint16_t(((uint32_t(getInTouch(XPT2046_Y))) * tsoffsets[2]) >> 16) + tsoffsets[3];
     if (!isTouched()) return 0; // Fingers must still be on the TS for a valid read.
+
+    #if ENABLED(GRAPHICAL_TFT_ROTATE_180)
+      x = TOUCH_SENSOR_WIDTH - x;
+      y = TOUCH_SENSOR_HEIGHT - y;
+    #endif
 
     // Touch within the button area simulates an encoder button
     if (y > BUTTON_AREA_TOP && y < BUTTON_AREA_BOT)
@@ -129,11 +138,11 @@ uint8_t XPT2046::read_buttons() {
           : WITHIN(x, 242, 305) ? EN_C
           : 0;
 
-    if (x > TOUCH_SCREEN_WIDTH || !WITHIN(y, SCREEN_START_TOP, SCREEN_START_TOP + SCREEN_HEIGHT)) return 0;
+    if (x > TOUCH_SENSOR_WIDTH || !WITHIN(y, SCREEN_START_TOP, SCREEN_START_TOP + SCREEN_HEIGHT)) return 0;
 
     // Column and row above BUTTON_AREA_TOP
     int8_t col = (x - (SCREEN_START_LEFT)) * (LCD_WIDTH) / (TOUCHABLE_X_WIDTH),
-          row = (y - (SCREEN_START_TOP)) * (LCD_HEIGHT) / (TOUCHABLE_Y_HEIGHT);
+           row = (y - (SCREEN_START_TOP)) * (LCD_HEIGHT) / (TOUCHABLE_Y_HEIGHT);
 
     // Send the touch to the UI (which will simulate the encoder wheel)
     MarlinUI::screen_click(row, col, x, y);
@@ -151,30 +160,69 @@ bool XPT2046::isTouched() {
   );
 }
 
+#if ENABLED(TOUCH_BUTTONS_HW_SPI)
+  #include <SPI.h>
+
+  static void touch_spi_init(uint8_t spiRate) {
+    /**
+     * STM32F1 APB2 = 72MHz, APB1 = 36MHz, max SPI speed of this MCU if 18Mhz
+     * STM32F1 has 3 SPI ports, SPI1 in APB2, SPI2/SPI3 in APB1
+     * so the minimum prescale of SPI1 is DIV4, SPI2/SPI3 is DIV2
+     */
+    uint8_t clock;
+    switch (spiRate) {
+      case SPI_FULL_SPEED:    clock = SPI_CLOCK_DIV4;  break;
+      case SPI_HALF_SPEED:    clock = SPI_CLOCK_DIV4; break;
+      case SPI_QUARTER_SPEED: clock = SPI_CLOCK_DIV8; break;
+      case SPI_EIGHTH_SPEED:  clock = SPI_CLOCK_DIV16; break;
+      case SPI_SPEED_5:       clock = SPI_CLOCK_DIV32; break;
+      case SPI_SPEED_6:       clock = SPI_CLOCK_DIV64; break;
+      default:                clock = SPI_CLOCK_DIV2;        // Default from the SPI library
+    }
+    SPI.setModule(TOUCH_BUTTONS_HW_SPI_DEVICE);
+    SPI.begin();
+    SPI.setClockDivider(clock);
+    SPI.setBitOrder(MSBFIRST);
+    SPI.setDataMode(SPI_MODE0);
+  }
+#endif // TOUCH_BUTTONS_HW_SPI
+
 uint16_t XPT2046::getInTouch(const XPTCoordinate coordinate) {
   uint16_t data[3];
-
-  OUT_WRITE(TOUCH_CS_PIN, LOW);
-
   const uint8_t coord = uint8_t(coordinate) | XPT2046_CONTROL | XPT2046_DFR_MODE;
-  for (uint16_t i = 0; i < 3 ; i++) {
-    for (uint8_t j = 0x80; j; j >>= 1) {
-      WRITE(TOUCH_SCK_PIN, LOW);
-      WRITE(TOUCH_MOSI_PIN, bool(coord & j));
-      WRITE(TOUCH_SCK_PIN, HIGH);
+
+  #if ENABLED(TOUCH_BUTTONS_HW_SPI)
+
+    touch_spi_init(SPI_SPEED_6);
+    for (uint16_t i = 0; i < 3; i++) {
+      OUT_WRITE(TOUCH_CS_PIN, LOW);
+      SPI.transfer(coord);
+      data[i] = (((SPI.transfer(0xFF) << 8) | SPI.transfer(0xFF)) >> 3) & 0x0FFF;
+      WRITE(TOUCH_CS_PIN, HIGH);
     }
 
-    data[i] = 0;
-    for (uint16_t j = 0x8000; j; j >>= 1) {
-      WRITE(TOUCH_SCK_PIN, LOW);
-      if (READ(TOUCH_MISO_PIN)) data[i] |= j;
-      WRITE(TOUCH_SCK_PIN, HIGH);
-    }
-    WRITE(TOUCH_SCK_PIN, LOW);
-    data[i] >>= 4;
-  }
+  #else // !TOUCH_BUTTONS_HW_SPI
 
-  WRITE(TOUCH_CS_PIN, HIGH);
+    OUT_WRITE(TOUCH_CS_PIN, LOW);
+    for (uint16_t i = 0; i < 3; i++) {
+      for (uint8_t j = 0x80; j; j >>= 1) {
+        WRITE(TOUCH_SCK_PIN, LOW);
+        WRITE(TOUCH_MOSI_PIN, bool(coord & j));
+        WRITE(TOUCH_SCK_PIN, HIGH);
+      }
+
+      data[i] = 0;
+      for (uint16_t j = 0x8000; j; j >>= 1) {
+        WRITE(TOUCH_SCK_PIN, LOW);
+        if (READ(TOUCH_MISO_PIN)) data[i] |= j;
+        WRITE(TOUCH_SCK_PIN, HIGH);
+      }
+      WRITE(TOUCH_SCK_PIN, LOW);
+      data[i] >>= 4;
+    }
+    WRITE(TOUCH_CS_PIN, HIGH);
+
+  #endif // !TOUCH_BUTTONS_HW_SPI
 
   uint16_t delta01 = _MAX(data[0], data[1]) - _MIN(data[0], data[1]),
            delta02 = _MAX(data[0], data[2]) - _MIN(data[0], data[2]),
@@ -197,4 +245,4 @@ bool XPT2046::getTouchPoint(uint16_t &x, uint16_t &y) {
   return isTouched();
 }
 
-#endif // TOUCH_BUTTONS
+#endif // HAS_TOUCH_XPT2046
