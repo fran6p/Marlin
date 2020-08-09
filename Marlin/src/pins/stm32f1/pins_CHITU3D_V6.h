@@ -156,23 +156,49 @@
       #define XPT2046_Y_OFFSET               -20
     #endif
   #endif
+
+#elif ENABLED(TFT_480x320)
+  #define TFT_RESET_PIN                     PF11
+  #define TFT_BACKLIGHT_PIN                 PD13
+
+  #define LCD_USE_DMA_FSMC                        // Use DMA transfers to send data to the TFT
+  #define FSMC_CS_PIN                       PD7
+  #define FSMC_RS_PIN                       PD11
+  #define FSMC_DMA_DEV                      DMA2
+  #define FSMC_DMA_CHANNEL               DMA_CH5
+
+  #define XPT2046_X_CALIBRATION           -17181
+  #define XPT2046_Y_CALIBRATION            11434
+  #define XPT2046_X_OFFSET                   501
+  #define XPT2046_Y_OFFSET                    -9
+
+  #define TOUCH_CS_PIN                      PB7   // SPI1_NSS
+  #define TOUCH_SCK_PIN                     PA5   // SPI1_SCK
+  #define TOUCH_MISO_PIN                    PA6   // SPI1_MISO
+  #define TOUCH_MOSI_PIN                    PA7   // SPI1_MOSI
+
+  #define TFT_DRIVER                        ILI9488
+  #define TFT_BUFFER_SIZE                   14400
 #endif
 
-#define SPI_FLASH_SIZE 0x200000                   // 2MB
+// SPI Flash
+#define SPI_FLASH_SIZE                      0x200000  // 2MB
+#define HAS_SPI_FLASH                       1
+
+// SPI 2
+#define W25QXX_CS_PIN                       PB12
+#define W25QXX_MOSI_PIN                     PB15
+#define W25QXX_MISO_PIN                     PB14
+#define W25QXX_SCK_PIN                      PB13
 
 #if HAS_TFT_LVGL_UI
-  #define HAS_SPI_FLASH_FONT 0
-  #define HAS_GCODE_PREVIEW 1
-  #define HAS_GCODE_DEFAULT_VIEW_IN_FLASH 0
-  #define HAS_LANG_SELECT_SCREEN 0
-  #define HAS_BAK_VIEW_IN_FLASH 0
-  #define HAS_LOGO_IN_FLASH 0
-
-  // SPI 2
-  #define W25QXX_CS_PIN                     PB12
-  #define W25QXX_MOSI_PIN                   PB15
-  #define W25QXX_MISO_PIN                   PB14
-  #define W25QXX_SCK_PIN                    PB13
+  #define HAS_SPI_FLASH_FONT                0
+  #define HAS_GCODE_PREVIEW                 1
+  #define HAS_GCODE_DEFAULT_VIEW_IN_FLASH   0
+  #define HAS_LANG_SELECT_SCREEN            0
+  #define HAS_BAK_VIEW_IN_FLASH             0
+  #define HAS_LOGO_IN_FLASH                 0
+  #define HAS_TOUCH_XPT2046                 1
 
   #define TOUCH_CS_PIN                      PB7   // SPI1_NSS
   #define TOUCH_SCK_PIN                     PA5   // SPI1_SCK

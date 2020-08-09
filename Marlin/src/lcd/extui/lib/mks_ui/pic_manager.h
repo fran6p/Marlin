@@ -21,11 +21,9 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" { /* C-declarations for C++ */
-#endif
+#include "../../../../inc/MarlinConfig.h"
 
-#include "../../inc/MarlinConfigPre.h"
+#include "../../../../libs/W25Qxx.h"
 
 #include <lvgl.h>
 
@@ -125,6 +123,10 @@ extern "C" { /* C-declarations for C++ */
 // SD card information first addr
 #define VAR_INF_ADDR                    0x000000
 
+#ifdef __cplusplus
+extern "C" { /* C-declarations for C++ */
+#endif
+
 union union32 {
   uint8_t bytes[4];
   uint32_t dwords;
@@ -153,6 +155,8 @@ extern void get_spi_flash_data(const char *rec_buf, int offset, int size);
 extern void spi_flash_read_test();
 extern void default_view_Read(uint8_t *default_view_Rbuff, uint32_t default_view_Readsize);
 extern void flash_view_Read(uint8_t *flash_view_Rbuff, uint32_t flash_view_Readsize);
+
+extern W25QXXFlash W25QXX;
 
 #ifdef __cplusplus
 } /* C-declarations for C++ */

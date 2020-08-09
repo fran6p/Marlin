@@ -29,10 +29,10 @@
 #include "mks_hardware_test.h"
 
 #include "SPIFlashStorage.h"
-#include "W25Qxx.h"
+#include "../../../../libs/W25Qxx.h"
 
-#include "../../../../MarlinCore.h"
 #include "../../../../sd/cardreader.h"
+#include "../../../../MarlinCore.h"
 
 extern uint16_t DeviceCode;
 extern unsigned char bmp_public_buf[17 * 1024];
@@ -510,9 +510,8 @@ uint8_t public_buf[512];
       uint8_t pic_counter = 0;
       W25QXX.SPI_FLASH_BufferRead(&pic_counter, PIC_COUNTER_ADDR, 1);
       SERIAL_ECHOLNPAIR("Total assets loaded: ", pic_counter);
+      SERIAL_ECHOLNPAIR("Total Uncompressed: ", totalSizes, ", Compressed: ", totalCompressed);
     #endif
-
-    SERIAL_ECHOLNPAIR("Total Uncompressed: ", totalSizes, ", Compressed: ", totalCompressed);
   }
 
   #if HAS_SPI_FLASH_FONT
