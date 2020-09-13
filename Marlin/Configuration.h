@@ -767,7 +767,7 @@
  *                                      X, Y, Z, E0 [, E1[, E2...]]
  */
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 140 }
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 140 } // Modification pas E de 93 à 140 (BMG sans réduction)
+#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 415 } // Modification pas E de 93 à 140 (BMG sans réduction) puis de 140 à 415 pour extrudeur BMG 3:1 avec Flying Extruder
 
 /**
  * Default Max Feed Rate (mm/s)
@@ -1123,7 +1123,7 @@
 // @section extruder
 
 // For direct drive extruder v9 set to true, for geared extruder set to false.
-#define INVERT_E0_DIR false
+#define INVERT_E0_DIR true // BMG 3:1 => inversion sens rotation
 #define INVERT_E1_DIR false
 #define INVERT_E2_DIR false
 #define INVERT_E3_DIR false
