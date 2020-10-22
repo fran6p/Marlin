@@ -21,10 +21,6 @@
  */
 #pragma once
 
-#include "../../inc/MarlinConfig.h"
+#define BOARD_INFO_NAME "BTT SKR Mini MZ V1.0"
 
-#if HAS_SPI_TFT
-  #include HAL_PATH(../../HAL, tft/tft_spi.h)
-#elif HAS_FSMC_TFT
-  #include HAL_PATH(../../HAL, tft/tft_fsmc.h)
-#endif
+#include "pins_BTT_SKR_MINI_E3_V2_0.h"
