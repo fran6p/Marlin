@@ -499,16 +499,11 @@
     #define DEFAULT_Ki_LIST {   1.08,   1.08 }
     #define DEFAULT_Kd_LIST { 114.00, 114.00 }
   #else
-    #define DEFAULT_Kp  22.20
-    #define DEFAULT_Ki   1.08
-    #define DEFAULT_Kd 114.00
+    // Creality Ender-3 Pro
+    #define DEFAULT_Kp 21.73
+    #define DEFAULT_Ki 1.54
+    #define DEFAULT_Kd 76.55
   #endif
-// If you are using a pre-configured hotend then you can use one of the value sets by uncommenting it
-
-  // Creality Ender-3 Pro
-  #define DEFAULT_Kp 21.73
-  #define DEFAULT_Ki 1.54
-  #define DEFAULT_Kd 76.55
 #endif // PIDTEMP
 
 //===========================================================================
