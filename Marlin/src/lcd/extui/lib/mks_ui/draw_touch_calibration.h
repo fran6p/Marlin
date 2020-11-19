@@ -19,20 +19,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
-#include "../inc/MarlinConfig.h"
+#ifdef __cplusplus
+  extern "C" { /* C-declarations for C++ */
+#endif
 
-#if ENABLED(MK2_MULTIPLEXER)
+extern void lv_draw_touch_calibration_screen();
+extern void lv_clear_touch_calibration_screen();
+extern void lv_update_touch_calibration_screen();
 
-#include "../module/stepper.h"
-
-void select_multiplexed_stepper(const uint8_t e) {
-  planner.synchronize();
-  disable_e_steppers();
-  WRITE(E_MUX0_PIN, TEST(e, 0) ? HIGH : LOW);
-  WRITE(E_MUX1_PIN, TEST(e, 1) ? HIGH : LOW);
-  WRITE(E_MUX2_PIN, TEST(e, 2) ? HIGH : LOW);
-  safe_delay(100);
-}
-
-#endif // MK2_MULTIPLEXER
+//extern void disp_temp_ready_print();
+#ifdef __cplusplus
+  } /* C-declarations for C++ */
+#endif
