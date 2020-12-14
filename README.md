@@ -23,7 +23,14 @@ There are several branches in this project for your convenience. You can directl
 Legacy branches:
 
 - **[`creality-cr6-merge-attempt`](https://github.com/CR6Community/Marlin/tree/creality-cr6-merge-attempt)** - initial branch based on Creality v1.0.3.7 firmware source code release and upgraded until the community firmware 3 release. All new releases are released from the `extui` branch.
+
+Original source code tracking:
+
 - **[`cr6-creality-changes`](https://github.com/CR6Community/Marlin/tree/cr6-creality-changes)** - tracks the changes from the Creality source code dump against Marlin upstream. As of now we have the Creality v1.0.3.7 firmware on this branch, based on Marlin pre-2.0.
+
+    - **[`v1.0.3.7`](https://github.com/CR6Community/Marlin/tree/official-fw/v1.0.3.7)**
+    - **[`v1.0.4.1`](https://github.com/CR6Community/Marlin/tree/official-fw/v1.0.4.1)**
+
 - **[`cr6-btt-dump`](https://github.com/CR6Community/Marlin/tree/cr6-btt-dump) - tracks the changes from the [Big Tree Tech SKR board firmware](https://github.com/bigtreetech/BIGTREETECH-SKR-CR6/tree/master/firmware/BTT-SKR-CR6)** source code (which does not have any git history). It appears the for the moment BTT source code is based on the Creality v1.0.3.7 source code release.
 
 ## Purpose of this community firmware
