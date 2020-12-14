@@ -50,14 +50,6 @@
   #endif
 #endif
 
-/* SPI */
-//#define SPI_EEPROM  // EEPROM on SPI-0
-//#define SPI_CHAN_EEPROM1        ?
-//#define SPI_EEPROM1_CS          ?
-// 2K EEPROM
-//#define SPI_EEPROM2_CS          ?
-// 32Mb FLASH
-//#define SPI_FLASH_CS            ?
 
 //
 // Limit Switches
@@ -123,17 +115,24 @@
 //
 // Heaters / Fans
 /*certification*/
-// #define HEATER_0_PIN       PB14  // HEATER1
-// #define HEATER_BED_PIN     PB13  // HOT BED
 
-// #define FAN_PIN            PB15  // FAN
-// #define FAN_SOFT_PWM
+#if MB(CREALITY_V452)
 
-#define HEATER_0_PIN       PA1   // HEATER1
-#define HEATER_BED_PIN     PA2   // HOT BED
+  #define HEATER_0_PIN       PA1   // HEATER1
+  #define HEATER_BED_PIN     PA2   // HOT BED
 
-#define FAN_PIN            PA0   // FAN
-#define FAN_SOFT_PWM
+  #define FAN_PIN            PA0   // FAN
+  #define FAN_SOFT_PWM
+
+#elif MB(CREALITY_V453)
+
+  #define HEATER_0_PIN       PB14  // HEATER1
+  #define HEATER_BED_PIN     PB13  // HOT BED
+
+  #define FAN_PIN            PB15  // FAN
+  #define FAN_SOFT_PWM
+
+#endif
 
 /* SD card detect */
 #define SD_DETECT_PIN      PC7
@@ -145,8 +144,11 @@
 #define CASE_LIGHT_PIN PA6
 
 #define FIL_RUNOUT_PIN PA7 
-// #define OPTO_SWITCH_PIN    PB2   // certification
-#define OPTO_SWITCH_PIN    PC6
 
+#if MB(CREALITY_V452)
+  #define OPTO_SWITCH_PIN    PC6
+#elif MB(CREALITY_V453)
+  #define OPTO_SWITCH_PIN    PB2   // certification
+#endif
 
 #define TEMP_TIMER_CHAN 4 // Channel of the timer to use for compare and interrupts
