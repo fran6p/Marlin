@@ -1047,9 +1047,17 @@ void DGUSScreenHandler::UpdateNewScreen(DGUSLCD_Screens newscreen, bool save_cur
 
 void DGUSScreenHandler::PopToOldScreen() {
   DEBUG_ECHOLNPAIR("PopToOldScreen s=", past_screens[0]);
-  GotoScreen(past_screens[0], false);
-  memmove(&past_screens[0], &past_screens[1], sizeof(past_screens) - 1);
-  past_screens[sizeof(past_screens) - 1] = DGUSLCD_SCREEN_MAIN;
+
+  if(past_screens[0] != 0) {
+    GotoScreen(past_screens[0], false);
+    memmove(&past_screens[0], &past_screens[1], sizeof(past_screens) - 1);
+    past_screens[sizeof(past_screens) - 1] = DGUSLCD_SCREEN_MAIN;
+  } else {
+    if(ExtUI::isPrinting())
+      GotoScreen(DGUSLCD_SCREEN_PRINT_RUNNING, false);
+    else 
+      GotoScreen(DGUSLCD_SCREEN_MAIN, false);
+  }
 }
 
 void DGUSScreenHandler::updateCurrentScreen(DGUSLCD_Screens current) {
@@ -1130,7 +1138,7 @@ bool DGUSScreenHandler::loop() {
     // In some occassions the display needs more time to handle a screen change, for instance,
     // with ADVANCED_PAUSE_FEATURE, the calls to ExtUI::onUserConfirmRequired are quite fast
     DEBUG_ECHOLN("Nudging the display to update the current screen...");
-    GotoScreen(current_screen, true);
+    GotoScreen(DGUSLCD_SCREEN_PRINT_PAUSED, true);
   }
 
   if (!IsScreenComplete() || ELAPSED(ms, next_event_ms)) {
