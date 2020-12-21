@@ -157,7 +157,15 @@ void TuneMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
 }
 
 void PrintRunningMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
-    // There are actually no buttons to handle here: all buttons navigate to other screens (like confirmation screens)
+    switch (var.VP) {
+        case VP_BUTTON_ADJUSTENTERKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TUNING);
+                    break;
+            }
+        break;
+    }
 }
 
 void PrintPausedMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
@@ -172,6 +180,14 @@ void PrintPausedMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
                 ScreenHandler.GotoScreen(DGUSLCD_SCREEN_PRINT_RUNNING);
             }
             break;
+
+        case VP_BUTTON_ADJUSTENTERKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TUNING);
+                    break;
+            }
+        break;
     }
 }
 
