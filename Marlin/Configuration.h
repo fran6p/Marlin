@@ -28,7 +28,7 @@
  */
 
 // Is the BLTouch option installed?
-#define CR10V2_BLTOUCH
+//#define CR10V2_BLTOUCH
 
 /**
  * Configuration.h
