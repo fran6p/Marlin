@@ -777,6 +777,9 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
           delay(200);
 
           probeTared = true;
+
+          SERIAL_ECHOLN("FIX_MOUNTED_PROBE: Resetting endstop state");
+          endstops.hit_on_purpose();
       }
     #endif
 
