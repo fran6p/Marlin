@@ -36,8 +36,8 @@
 
 #include "../../../../../feature/caselight.h"
 
-#include "../../../../ultralcd.h"
 #include "../../../ui_api.h"
+#include "../../lcd/marlinui.h"
 
 #include "PageHandlers.h"
 
@@ -113,6 +113,9 @@ const uint16_t VPList_Control[] PROGMEM = {
   #endif
 
   VP_LED_TOGGLE,
+  VP_MUTE_ICON,
+  VP_STANDBY_BACKLIGHT_ICON,
+  VP_SCREEN_BACKLIGHT_STANDBY,
 
   0x0000
 };
@@ -128,6 +131,7 @@ const uint16_t VPList_Feed[] PROGMEM = {
   //VP_Fan0_Percentage,
   VP_Feedrate_Percentage,
 
+  VP_FEED_AMOUNT,
 
   0x0000
 };
@@ -216,7 +220,10 @@ const uint16_t VPList_PrintScreen[] PROGMEM = {
   #endif
 
   VP_X_POSITION, VP_Y_POSITION, VP_Z_POSITION,
+  VP_X_POSITION_SP, VP_Y_POSITION_SP, VP_Z_POSITION_SP,
+
   VP_Z_OFFSET,
+  VP_Flowrate_E0,
   //VP_Fan0_Percentage,
   VP_Feedrate_Percentage,
 
@@ -259,6 +266,8 @@ const uint16_t VPList_ZOffsetLevel[] PROGMEM = {
 
 const uint16_t VPList_TuneScreen[] PROGMEM = {
   VP_PrintTime,
+
+  VP_Flowrate_E0,
 
   #if HOTENDS >= 1
     VP_T_E0_Is, VP_T_E0_Set,// VP_E0_STATUS,
@@ -309,6 +318,7 @@ const uint16_t VPList_Info[] PROGMEM = {
   VP_Feedrate_Percentage,
 
   VP_PRINTER_BEDSIZE,
+  VP_MARLIN_WEBSITE,
   VP_MARLIN_VERSION,
 
   0x0000
@@ -370,7 +380,7 @@ const struct VPMapping VPMap[] PROGMEM = {
   { DGUSLCD_SCREEN_HEATING_FAILED, VPList_None },
   { DGUSLCD_SCREEN_THERMISTOR_ERROR, VPList_None },
 
-  { DGUSLCD_SCREEN_AUTOHOME, VPList_None },
+  { DGUSLCD_SCREEN_AUTOHOME, VPList_PrintScreen },
 
   { DGUSLCD_SCREEN_DIALOG_PAUSE, VPList_None },
   { DGUSLCD_SCREEN_DIALOG_STOP, VPList_DialogStop },
@@ -394,6 +404,7 @@ const struct DGUS_VP_Variable ListOfVP[] PROGMEM = {
   // TODO:
 
   #if HOTENDS >= 1
+    VPHELPER(VP_Flowrate_E0, &planner.flow_percentage[ExtUI::extruder_t::E0], ScreenHandler.HandleFlowRateChanged, &ScreenHandler.DGUSLCD_SendWordValueToDisplay),
     VPHELPER(VP_T_E0_Is, &thermalManager.temp_hotend[0].celsius, nullptr, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<0>),
     VPHELPER(VP_T_E0_Set, &thermalManager.temp_hotend[0].target, ScreenHandler.HandleTemperatureChanged, &ScreenHandler.DGUSLCD_SendWordValueToDisplay),
   #endif
@@ -424,6 +435,7 @@ const struct DGUS_VP_Variable ListOfVP[] PROGMEM = {
   #endif
 
   // About info
+  VPHELPER(VP_MARLIN_WEBSITE, nullptr, nullptr, ScreenHandler.DGUSLCD_SendAboutFirmwareWebsite),
   VPHELPER(VP_MARLIN_VERSION, nullptr, nullptr, ScreenHandler.DGUSLCD_SendAboutFirmwareVersion),
   VPHELPER(VP_PRINTER_BEDSIZE, nullptr, nullptr, ScreenHandler.DGUSLCD_SendAboutPrintSize),
 
@@ -431,6 +443,10 @@ const struct DGUS_VP_Variable ListOfVP[] PROGMEM = {
   VPHELPER(VP_X_POSITION, &current_position.x, ScreenHandler.HandlePositionChange, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<1>),
   VPHELPER(VP_Y_POSITION, &current_position.y, ScreenHandler.HandlePositionChange, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<1>),
   VPHELPER(VP_Z_POSITION, &current_position.z, ScreenHandler.HandlePositionChange, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<1>),
+
+  VPHELPER(VP_X_POSITION_SP, nullptr, nullptr, ScreenHandler.SendAxisTrustValue<X_AXIS>),
+  VPHELPER(VP_Y_POSITION_SP, nullptr, nullptr, ScreenHandler.SendAxisTrustValue<Y_AXIS>),
+  VPHELPER(VP_Z_POSITION_SP, nullptr, nullptr, ScreenHandler.SendAxisTrustValue<Z_AXIS>),
 
   VPHELPER(VP_Z_OFFSET, &probe.offset.z, ScreenHandler.HandleZoffsetChange, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<2>),
 
@@ -445,7 +461,7 @@ const struct DGUS_VP_Variable ListOfVP[] PROGMEM = {
   VPHELPER(VP_CONFIRMED, nullptr, ScreenHandler.ScreenConfirmedOK, nullptr),
 
   // Feed
-  VPHELPER(VP_FEED_AMOUNT, &ScreenHandler.feed_amount, ScreenHandler.HandleFeedAmountChanged, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<2>),
+  VPHELPER(VP_FEED_AMOUNT, &ScreenHandler.feed_amount, ScreenHandler.HandleFeedAmountChanged, ScreenHandler.DGUSLCD_SendFloatAsIntValueToDisplay<1>),
 
   // Creality has the same button ID mapped all over the place, so let the generic handler figure it out
   VPHELPER(VP_BUTTON_MAINENTERKEY, nullptr, DGUSCrealityDisplay_HandleReturnKeyEvent, nullptr),
@@ -473,9 +489,18 @@ const struct DGUS_VP_Variable ListOfVP[] PROGMEM = {
   VPHELPER_STR(VP_SD_FileName4,  nullptr, VP_SD_FileName_LEN, nullptr, ScreenHandler.DGUSLCD_SD_SendFilename),
   VPHELPER_STR(VP_SD_FileName5,  nullptr, VP_SD_FileName_LEN, nullptr, ScreenHandler.DGUSLCD_SD_SendFilename),
 
+  // Additional buttons
+  VPHELPER(VP_MUTE_TOGGLE, nullptr, ScreenHandler.HandleToggleTouchScreenMute, nullptr),
+  VPHELPER(VP_STANDBY_BACKLIGHT_TOGGLE, nullptr, ScreenHandler.HandleToggleTouchScreenStandbySetting, nullptr),
+
+  // Additional settings
+  VPHELPER(VP_SCREEN_BACKLIGHT_STANDBY, &ScreenHandler.Settings.standby_screen_brightness, ScreenHandler.HandleTouchScreenStandbyBrightnessSetting, ScreenHandler.DGUSLCD_SendWordValueToDisplay),
+
   // Icons
   VPHELPER(VP_STEPPERS, &ScreenHandler.are_steppers_enabled, nullptr, (ScreenHandler.DGUSLCD_SendIconValue<ICON_TOGGLE_OFF, ICON_TOGGLE_ON>)),
-  VPHELPER(VP_LED_TOGGLE, &caselight.on, nullptr, (ScreenHandler.DGUSLCD_SendIconValue<ICON_TOGGLE_ON, ICON_TOGGLE_OFF>)),
+  VPHELPER(VP_LED_TOGGLE, &caselight.on, nullptr, (ScreenHandler.DGUSLCD_SendIconValue<ICON_LED_TOGGLE_ON, ICON_LED_TOGGLE_OFF>)),
+  VPHELPER(VP_STANDBY_BACKLIGHT_ICON, &ScreenHandler.Settings.display_standby, nullptr, (ScreenHandler.DGUSLCD_SendIconValue<ICON_STANDBY_TOGGLE_ON, ICON_STANDBY_TOGGLE_OFF>)),
+  VPHELPER(VP_MUTE_ICON, &ScreenHandler.Settings.display_sound, nullptr, (ScreenHandler.DGUSLCD_SendIconValue<ICON_SOUND_TOGGLE_OFF, ICON_SOUND_TOGGLE_ON>)),
 
   // M117 LCD String (We don't need the string in memory but "just" push it to the display on demand, hence the nullptr
   { .VP = VP_M117, .memadr = nullptr, .size = VP_M117_LEN, .set_by_display_handler = nullptr, .send_to_display_handler =&ScreenHandler.DGUSLCD_SendStringToDisplay },

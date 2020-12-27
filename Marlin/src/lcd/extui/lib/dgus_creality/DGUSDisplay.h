@@ -68,6 +68,9 @@ public:
   static void WriteVariable(uint16_t adr, int8_t value);
   static void WriteVariable(uint16_t adr, long value);
 
+  static void SetVariableDisplayColor(uint16_t sp, uint16_t color);
+  static void SetVariableAppendText(uint16_t sp, PGM_P appendText);
+
   static void ReadVariable(uint16_t adr);
 
   // Utility functions for bridging ui_api and dgus
@@ -82,16 +85,12 @@ public:
     Setter(newvalue, selector);
   }
 
-  // Until now I did not need to actively read from the display. That's why there is no ReadVariable
-  // (I extensively use the auto upload of the display)
-
   // Force display into another screen.
   // (And trigger update of containing VPs)
   // (to implement a pop up message, which may not be nested)
   static void RequestScreen(DGUSLCD_Screens screen);
 
-  // Request the current displayed screen - will be passed to current_screen_update_callback
-  static void ReadCurrentScreen();
+  static void SetTouchScreenConfiguration(bool enable_standby, bool enable_sound, uint8_t standby_brightness);
 
   // Periodic tasks, eg. Rx-Queue handling.
   static void loop();
@@ -103,8 +102,6 @@ public:
   // Checks two things: Can we confirm the presence of the display and has we initiliazed it.
   // (both boils down that the display answered to our chatting)
   static inline bool isInitialized() { return Initialized; }
-
-  static UPDATE_CURRENT_SCREEN_CALLBACK current_screen_update_callback;
 
 private:
   static void WriteHeader(uint16_t adr, uint8_t cmd, uint8_t payloadlen);

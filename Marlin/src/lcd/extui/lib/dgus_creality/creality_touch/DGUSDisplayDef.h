@@ -98,8 +98,8 @@ constexpr uint16_t VP_MSGSTR2 = 0x2030;
 constexpr uint8_t VP_MSGSTR2_LEN = 0x40;
 constexpr uint16_t VP_MSGSTR3 = 0x2070;
 constexpr uint8_t VP_MSGSTR3_LEN = 0x40;
-//constexpr uint16_t VP_MSGSTR4 = 0x11C0;
-// constexpr uint8_t VP_MSGSTR4_LEN = 0x20;
+constexpr uint16_t VP_MSGSTR4 = 0x2080;
+constexpr uint8_t VP_MSGSTR4_LEN = 0x20;
 
 // // Screenchange request for screens that only make sense when printer is idle.
 // // e.g movement is only allowed if printer is not printing.
@@ -185,6 +185,18 @@ constexpr uint16_t VP_PRINTER_BEDSIZE_LEN = 12;
 constexpr uint16_t VP_MARLIN_VERSION = 0x2222;
 constexpr uint8_t VP_MARLIN_VERSION_LEN = 20;   // there is more space on the display, if needed.
 
+constexpr uint16_t VP_MARLIN_WEBSITE = 0x2242;
+constexpr uint8_t VP_MARLIN_WEBSITE_LEN = 32;  
+
+constexpr uint16_t VP_STANDBY_BACKLIGHT_ICON = 0x2280;
+constexpr uint16_t VP_STANDBY_BACKLIGHT_TOGGLE = 0x2282;
+
+constexpr uint16_t VP_MUTE_ICON = 0x2284;
+constexpr uint16_t VP_MUTE_TOGGLE = 0x2286;
+
+constexpr uint16_t VP_SCREEN_BACKLIGHT_STANDBY = 0x228D;
+
+
 // Material preheat settings
 constexpr uint16_t VP_PREHEAT_PLA_HOTEND_TEMP = 0x1102;
 constexpr uint16_t VP_PREHEAT_PLA_BED_TEMP = 0x1104;
@@ -194,7 +206,7 @@ constexpr uint16_t VP_PREHEAT_ABS_BED_TEMP = 0x110a;
 
 // // Place for status messages.
 constexpr uint16_t VP_M117 = 0x21B3;
-constexpr uint8_t VP_M117_LEN = 60;
+constexpr uint8_t VP_M117_LEN = 40;
 
 // // Temperatures.
 constexpr uint16_t VP_T_E0_Is = 0x1036;  // 4 Byte Integer - HEAD_CURRENT_TEMP_VP
@@ -217,8 +229,7 @@ constexpr uint16_t VP_T_E0_Set = 0x1034; // 2 Byte Integer - HEAD_SET_TEMP_VP
 constexpr uint16_t VP_T_Bed_Is = 0x103c;  // 4 Byte Integer - BED_SET_TEMP_VP
 constexpr uint16_t VP_T_Bed_Set = 0x103A; // 2 Byte Integer - BED_CURRENT_TEMP_VP
 
-constexpr uint16_t VP_Flowrate_E0 = 0x3090; // 2 Byte Integer
-// constexpr uint16_t VP_Flowrate_E1 = 0x3092; // 2 Byte Integer
+constexpr uint16_t VP_Flowrate_E0 = 0x228A; // 2 Byte Integer
 
 // constexpr uint16_t VP_Fan0_Percentage = 0x3100;  // 2 Byte Integer (0..100)
 // constexpr uint16_t VP_Fan1_Percentage = 0x33A2;  // 2 Byte Integer (0..100)
@@ -343,10 +354,23 @@ constexpr uint16_t VP_FEED_PROGRESS = 0x108e;
 
 // Movement screen
 constexpr uint16_t VP_X_POSITION = 0x1048;
+constexpr uint16_t VP_X_POSITION_SP = 0x4000;
 constexpr uint16_t VP_Y_POSITION = 0x104A;
+constexpr uint16_t VP_Y_POSITION_SP = 0x4030;
 constexpr uint16_t VP_Z_POSITION = 0x104C;
+constexpr uint16_t VP_Z_POSITION_SP = 0x4060;
 constexpr uint16_t VP_BUTTON_MOVEKEY = 0x1046;
 
 // Icons
 constexpr uint16_t ICON_TOGGLE_ON = 1;
 constexpr uint16_t ICON_TOGGLE_OFF = 2;
+
+// Toggles
+constexpr uint16_t ICON_FAN_TOGGLE_ON = 1;
+constexpr uint16_t ICON_FAN_TOGGLE_OFF = 2;
+constexpr uint16_t ICON_LED_TOGGLE_ON = 3;
+constexpr uint16_t ICON_LED_TOGGLE_OFF = 4;
+constexpr uint16_t ICON_SOUND_TOGGLE_ON = 5;
+constexpr uint16_t ICON_SOUND_TOGGLE_OFF = 6;
+constexpr uint16_t ICON_STANDBY_TOGGLE_ON = 7;
+constexpr uint16_t ICON_STANDBY_TOGGLE_OFF = 8;

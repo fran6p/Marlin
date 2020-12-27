@@ -28,11 +28,25 @@
 
 enum DGUSLCD_Screens : uint8_t;
 
+struct creality_dwin_settings_t {
+  size_t settings_size;
+  bool led_state;
+  bool display_standby;
+  bool display_sound;
+  int16_t standby_screen_brightness;
+};
+
 class DGUSScreenHandler {
 public:
   DGUSScreenHandler() = default;
 
   static bool loop();
+
+  static void DefaultSettings();
+  static void LoadSettings(const char* buff);
+  static void StoreSettings(char* buff);
+  static void SetTouchScreenConfiguration();
+  static void OnPowerlossResume();
 
   /// Send all 4 strings that are displayed on the infoscreen, confirmation screen and kill screen
   /// The bools specifing whether the strings are in RAM or FLASH.
@@ -66,11 +80,14 @@ public:
   static void HandleSettings(DGUS_VP_Variable &var, void *val_ptr);
   static void HandleStepPerMMChanged(DGUS_VP_Variable &var, void *val_ptr);
   static void HandleStepPerMMExtruderChanged(DGUS_VP_Variable &var, void *val_ptr);
-
   static void HandleFeedAmountChanged(DGUS_VP_Variable &var, void *val_ptr);
 
   // Hook for move to position
   static void HandlePositionChange(DGUS_VP_Variable &var, void *val_ptr);
+
+  static void HandleToggleTouchScreenMute(DGUS_VP_Variable &var, void *val_ptr);
+  static void HandleToggleTouchScreenStandbySetting(DGUS_VP_Variable &var, void *val_ptr);
+  static void HandleTouchScreenStandbyBrightnessSetting(DGUS_VP_Variable &var, void *val_ptr);
 
   #if HAS_PID_HEATING
     // Hook for "Change this temperature PID para"
@@ -184,6 +201,7 @@ public:
     static void DGUSLCD_SendWaitingStatusToDisplay(DGUS_VP_Variable &var);
   #endif
 
+  static void DGUSLCD_SendAboutFirmwareWebsite(DGUS_VP_Variable &var);
   static void DGUSLCD_SendAboutFirmwareVersion(DGUS_VP_Variable &var);
   static void DGUSLCD_SendAboutPrintSize(DGUS_VP_Variable &var);
 
@@ -234,14 +252,24 @@ public:
     }
   }
 
+  template<AxisEnum Axis>
+  static void SendAxisTrustValue(DGUS_VP_Variable &var) {
+    bool trust = axis_is_trusted(Axis);
+
+    uint16_t color = trust ? 0xFFFF /*White*/ : 0XF800 /*Red*/;
+    dgusdisplay.SetVariableDisplayColor(var.VP, color);
+
+    //PGM_P suffix = trust ? nullptr : "???";
+    //dgusdisplay.SetVariableAppendText(var.VP, suffix);
+  }
+
+
   /// Force an update of all VP on the current screen.
   static inline void ForceCompleteUpdate() { update_ptr = 0; ScreenComplete = false; }
   /// Has all VPs sent to the screen
   static inline bool IsScreenComplete() { return ScreenComplete; }
 
   static inline DGUSLCD_Screens getCurrentScreen() { return current_screen; }
-
-  static void updateCurrentScreen(DGUSLCD_Screens current);
 
   static bool HandlePendingUserConfirmation();
 
@@ -265,6 +293,9 @@ private:
     static int16_t top_file;    ///< file on top of file chooser
     static int16_t file_to_print; ///< touched file to be confirmed
   #endif
+
+public: // Needed for VP auto-upload
+  static creality_dwin_settings_t Settings;
 };
 
 extern DGUSScreenHandler ScreenHandler;

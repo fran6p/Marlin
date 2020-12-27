@@ -8,6 +8,7 @@
 #include "../../../../../module/motion.h"
 #include "../../../../../module/planner.h"
 #include "../../../../../feature/pause.h"
+#include "../../../../../gcode/gcode.h"
 
 #if ENABLED(FILAMENT_RUNOUT_SENSOR)
 #include "../../../../../feature/runout.h"
@@ -15,8 +16,8 @@
 
 #include "../../../../../module/settings.h"
 
-#include "../../../../ultralcd.h"
 #include "../../../ui_api.h"
+#include "../../lcd/marlinui.h"
 
 #include "PageHandlers.h"
 
@@ -25,7 +26,27 @@
 // Definitions of page handlers
 
 void MainMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
-    // Nothing
+    switch (var.VP) {
+        case VP_BUTTON_MAINENTERKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_SDFILELIST);
+                    break;
+
+                case 2:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_PREPARE);
+                    break;
+
+                case 3:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_CONTROL);
+                    break;
+
+                case 4:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_ZOFFSET_LEVEL);
+                    break;
+            }
+            break;
+    }
 }
 
 void ControlMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
@@ -33,18 +54,26 @@ void ControlMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
         case VP_BUTTON_PREPAREENTERKEY:
             switch(buttonValue) {
                 case 5: // About
-                    // Automatically handled
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_INFO);
                     break;
 
                 case 7: // Reset to factory settings
                     settings.reset();
                     settings.save();
+
+                    ExtUI::injectCommands_P(PSTR("M300"));
+
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MAIN);
                     break;
 
                 case 9: // Back button
-                    // TODO: should navigate automatically
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MAIN);
                     break;
             }
+            break;
+
+        case VP_BUTTON_TEMPCONTROL:
+            if (buttonValue == 2) ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TEMP);
             break;
 
         case VP_BUTTON_ADJUSTENTERKEY:
@@ -78,9 +107,14 @@ void LevelingModeHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
 
             break;
 
+        case VP_BUTTON_PREPAREENTERKEY:
+            if (buttonValue == 9) ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MAIN);
+            break;
+
         case VP_BUTTON_MAINENTERKEY:
             // Go to leveling screen
             ExtUI::injectCommands_P("G28\nG29");
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_LEVELING);
             break;
     }
 }
@@ -104,14 +138,46 @@ void TempMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
             }
 
             break;
+
+        case VP_BUTTON_TEMPCONTROL:
+            switch (buttonValue){ 
+                case 3:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TEMP_PLA);
+                    break;
+
+                case 4:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TEMP_ABS);
+                    break;
+
+                case 7:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_CONTROL);
+                    break;
+            }
+            break;
     }
 }
 
 void PrepareMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
     switch (var.VP) {
         case VP_BUTTON_PREPAREENTERKEY:
-            // Disable steppers
-            ScreenHandler.HandleMotorLockUnlock(var, &buttonValue);
+            switch (buttonValue){
+                case 3:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE10MM);
+                    break;
+
+                case 6:
+                    // Disable steppers
+                    ScreenHandler.HandleMotorLockUnlock(var, &buttonValue);
+                    break;
+
+                case 9:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MAIN);
+                    break;
+            }
+        break;
+
+        case VP_BUTTON_HEATLOADSTARTKEY: 
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_FEED);
         break;
 
         case VP_BUTTON_COOLDOWN:
@@ -165,6 +231,22 @@ void PrintRunningMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) 
                     break;
             }
         break;
+
+        case VP_BUTTON_PAUSEPRINTKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_DIALOG_PAUSE);
+                    break;
+            }
+        break;
+
+        case VP_BUTTON_STOPPRINTKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_DIALOG_STOP);
+                    break;
+            }
+        break;
     }
 }
 
@@ -188,6 +270,14 @@ void PrintPausedMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
                     break;
             }
         break;
+
+        case VP_BUTTON_STOPPRINTKEY:
+            switch (buttonValue) {
+                case 1:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_DIALOG_STOP);
+                    break;
+            }
+        break;
     }
 }
 
@@ -202,6 +292,18 @@ void PrintPauseDialogHandler(DGUS_VP_Variable &var, unsigned short buttonValue) 
 
                 case 3:
                     ScreenHandler.GotoScreen(DGUSLCD_SCREEN_PRINT_RUNNING);
+                    break;
+            }
+            break;
+    }
+}
+
+void PrintFinishMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
+    switch (var.VP){
+        case VP_BUTTON_MAINENTERKEY:
+            switch (buttonValue) {
+                case 5:
+                    ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MAIN);
                     break;
             }
             break;
@@ -247,24 +349,50 @@ void PreheatSettingsScreenHandler(DGUS_VP_Variable &var, unsigned short buttonVa
             ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TEMP);
         break;
 
-        case VP_BUTTON_COOLDOWN:
+        case VP_BUTTON_COOLDOWN: // You can't make this up
             // Back button, discard settings
             settings.load();
+
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_TEMP);
             break;
     }
 }
 
- void change_filament_with_temp(PGM_P command, const uint16_t celsius) {
-    thermalManager.setTargetHotend(celsius, ExtUI::H0);
+void InfoMenuHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
+    switch (var.VP){
+        case VP_BUTTON_TEMPCONTROL:
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_CONTROL);
+        break;
+    }
+}
 
-    char cmd[32];
+ void change_filament_with_temp(PGM_P command, const uint16_t celsius) {
+     // Heat if necessary
+    if (ExtUI::getActualTemp_celsius(ExtUI::E0) < celsius && abs(ExtUI::getActualTemp_celsius(ExtUI::E0) - celsius) > 2) {
+        thermalManager.setTargetHotend(celsius, ExtUI::H0);
+        thermalManager.wait_for_hotend(ExtUI::H0, false);
+    }
+
+    // Remember if E was relative
+    bool axisWasRelative = GcodeSuite::axis_is_relative(E_AXIS);
+    GcodeSuite::set_e_relative();
+
+    // Inject E axis move command
+    char cmd[64];
     sprintf_P(cmd, command, ScreenHandler.feed_amount);
     
     SERIAL_ECHOPAIR("Injecting command: ", cmd);
     ExtUI::injectCommands(cmd);
 
+    // Handle commands (possibly 2)
     SERIAL_ECHOPGM_P("- waiting for queue");
     queue.advance();
+    planner.synchronize();
+
+    // Restore E axis state
+    if (!axisWasRelative) {
+        GcodeSuite::set_e_absolute();
+    }
 
     SERIAL_ECHOPGM_P("- done");
 }
@@ -282,7 +410,7 @@ void FeedHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
         case 1:
             dgusdisplay.WriteVariable(VP_FEED_PROGRESS, static_cast<int16_t>(10));
 
-            change_filament_with_temp(PSTR("M701 L%f"), celsius);
+            change_filament_with_temp(PSTR("G1 E%f F80"), celsius);
 
             dgusdisplay.WriteVariable(VP_FEED_PROGRESS, static_cast<int16_t>(0));
         break;
@@ -294,28 +422,36 @@ void FeedHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
 
             dgusdisplay.WriteVariable(VP_FEED_PROGRESS, static_cast<int16_t>(0));
         break;
+
+        case 3:
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_PREPARE);
+            break;
     }
 
     ScreenHandler.ForceCompleteUpdate();
 }
 
 void MoveHandler(DGUS_VP_Variable &var, unsigned short buttonValue) {
-  if (var.VP != VP_BUTTON_MOVEKEY) return;
+    if (var.VP == VP_BUTTON_HEATLOADSTARTKEY) {
+        ScreenHandler.GotoScreen(DGUSLCD_SCREEN_PREPARE);
+    }
 
-  switch (buttonValue) {
-    case 1:
-      ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE10MM);
-      break;
-    case 2:
-      ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE1MM);
-      break;
-    case 3:
-      ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE01MM);
-      break;
-    case 4:
-      ExtUI::injectCommands_P("G28");
-      break;
-  }
+    if (var.VP == VP_BUTTON_MOVEKEY) {
+        switch (buttonValue) {
+        case 1:
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE10MM);
+            break;
+        case 2:
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE1MM);
+            break;
+        case 3:
+            ScreenHandler.GotoScreen(DGUSLCD_SCREEN_MOVE01MM);
+            break;
+        case 4:
+            ExtUI::injectCommands_P("G28");
+            break;
+        }
+    }
 }
 
 // Register the page handlers
@@ -328,6 +464,8 @@ const struct PageHandler PageHandlers[] PROGMEM = {
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_ZOFFSET_LEVEL, LevelingModeHandler)
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_LEVELING, LevelingHandler)
 
+    PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_INFO, InfoMenuHandler)
+
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_TEMP, TempMenuHandler)
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_TEMP_PLA, PreheatSettingsScreenHandler)
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_TEMP_ABS, PreheatSettingsScreenHandler)
@@ -339,11 +477,13 @@ const struct PageHandler PageHandlers[] PROGMEM = {
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_MOVE10MM, MoveHandler)
 
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_FILAMENTRUNOUT1, FilamentRunoutHandler)
+    PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_FILAMENTRUNOUT2, FilamentRunoutHandler)
 
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_DIALOG_STOP, StopConfirmScreenHandler)
 
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_PRINT_RUNNING, PrintRunningMenuHandler)
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_PRINT_PAUSED, PrintPausedMenuHandler)
+    PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_PRINT_FINISH, PrintFinishMenuHandler)
 
     PAGE_HANDLER(DGUSLCD_Screens::DGUSLCD_SCREEN_DIALOG_PAUSE, PrintPauseDialogHandler)
 

@@ -188,6 +188,19 @@ public:
     }
   }
 
+  template<unsigned int decimals>
+  static void DGUSLCD_SendFloatAsLongValueToDisplay(uint16_t vp, float var) {
+    var *= cpow(10, decimals);
+    dgusdisplay.WriteVariable(vp, (long)var);
+  }
+
+  template<unsigned int decimals>
+  static void DGUSLCD_SendFloatAsIntValueToDisplay(uint16_t vp, float var) {
+    DEBUG_ECHOLNPAIR_F(" >> ", var, 6);
+    var *= cpow(10, decimals);
+    dgusdisplay.WriteVariable(vp, (int16_t)var);
+  }
+
   /// Send a float value to the display.
   /// Display will get a 2-byte integer scaled to the number of digits:
   /// Tell the display the number of digits and it cheats by displaying a dot between...

@@ -35,6 +35,10 @@
 #include "lib/dgus_creality/DGUSDisplayDef.h"
 #include "lib/dgus_creality/DGUSScreenHandler.h"
 
+#if ENABLED(POWER_LOSS_RECOVERY)
+  #include "../../feature/powerloss.h"
+#endif
+
 extern const char NUL_STR[];
 
 namespace ExtUI {
@@ -75,7 +79,7 @@ bool hasPrintTimer = false;
   void onPrintTimerStarted() {
     hasPrintTimer = true;
 
-    if (!ExtUI::isPrintingFromMedia()) {
+    if (!ExtUI::isPrintingFromMedia() && !(PrintJobRecovery::valid() && PrintJobRecovery::exists())) {
       ScreenHandler.SetPrintingFromHost();
     }
 
@@ -96,7 +100,10 @@ bool hasPrintTimer = false;
   }
 
   void onFilamentRunout(const extruder_t extruder) {
-    ScreenHandler.FilamentRunout();
+    // Only navigate to filament runout screen when we don't use M600 for changing the filament - otherwise it gets confusing for the user
+    if (strcmp_P(FILAMENT_RUNOUT_SCRIPT, PSTR("M600")) != 0) {
+      ScreenHandler.FilamentRunout();
+    }
   }
 
   void onUserConfirmed() {
@@ -112,7 +119,11 @@ bool hasPrintTimer = false;
       ScreenHandler.setstatusmessagePGM(msg);
       ScreenHandler.sendinfoscreen(PSTR("Confirmation required"), msg, NUL_STR, PSTR("Ok"), true, true, false, true);
 
-      ScreenHandler.GotoScreen(DGUSLCD_SCREEN_POPUP);
+      if (ExtUI::isPrinting()) {
+        ScreenHandler.GotoScreen(DGUSLCD_SCREEN_DIALOG_PAUSE);
+      } else {
+        ScreenHandler.GotoScreen(DGUSLCD_SCREEN_POPUP);
+      }
     }
     else if (ScreenHandler.getCurrentScreen() == DGUSLCD_SCREEN_POPUP) {
       DEBUG_ECHOLNPAIR("User confirmation canceled");
@@ -148,6 +159,8 @@ bool hasPrintTimer = false;
     // Example:
     //  static_assert(sizeof(myDataStruct) <= ExtUI::eeprom_data_size);
     //  memcpy(buff, &myDataStruct, sizeof(myDataStruct));
+
+    ScreenHandler.StoreSettings(buff);
   }
 
   void onLoadSettings(const char *buff) {
@@ -158,6 +171,8 @@ bool hasPrintTimer = false;
     // Example:
     //  static_assert(sizeof(myDataStruct) <= ExtUI::eeprom_data_size);
     //  memcpy(&myDataStruct, buff, sizeof(myDataStruct));
+
+    ScreenHandler.LoadSettings(buff);
   }
 
   void onConfigurationStoreWritten(bool success) {
@@ -176,21 +191,10 @@ bool hasPrintTimer = false;
     }
 
     void onMeshUpdate(const int8_t xpos, const int8_t ypos, const float zval) {
-    }
-
-    void onMeshUpdate(const int8_t xpos, const int8_t ypos, const ExtUI::probe_state_t state) {
-    }
-
-    void onMeshCallback(const int8_t xpos, const int8_t ypos, const float zval) {
       ScreenHandler.OnMeshLevelingUpdate(xpos, ypos);
     }
 
-    void onMeshCallback(const int8_t xpos, const int8_t ypos, const ExtUI::probe_state_t state) {
-      // Only called for UBL
-      if (state == MESH_START) {
-        ScreenHandler.OnMeshLevelingStart();
-      }
-
+    void onMeshUpdate(const int8_t xpos, const int8_t ypos, const ExtUI::probe_state_t state) {
       ScreenHandler.OnMeshLevelingUpdate(xpos, ypos);
     }
   #endif
@@ -198,7 +202,7 @@ bool hasPrintTimer = false;
   #if ENABLED(POWER_LOSS_RECOVERY)
     void onPowerLossResume() {
       // Called on resume from power-loss
-      ScreenHandler.GotoScreen(DGUSLCD_SCREEN_POWER_LOSS);
+      ScreenHandler.OnPowerlossResume();
     }
   #endif
 

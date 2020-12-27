@@ -156,6 +156,22 @@ void DGUSDisplay::WriteVariablePGM(uint16_t adr, const void* values, uint8_t val
   }
 }
 
+void DGUSDisplay::SetVariableDisplayColor(uint16_t sp, uint16_t color) {
+  WriteVariable(sp + 0x03, color);
+}
+
+void DGUSDisplay::SetVariableAppendText(uint16_t sp, PGM_P appendText) {
+  // High byte is length, low byte is first char
+  if (!appendText) {
+    WriteVariable(sp + 0x07, static_cast<uint8_t>(0));
+    return;
+  }
+
+  uint8_t lengthFirstChar = strlen_P(appendText);// << 8;
+  WriteVariable(sp + 0x07, lengthFirstChar);
+  WriteVariablePGM(sp + 0x08, appendText, strlen_P(appendText));
+}
+
 void DGUSDisplay::ProcessRx() {
 
   #if ENABLED(DGUS_SERIAL_STATS_RX_BUFFER_OVERRUNS)
@@ -230,22 +246,11 @@ void DGUSDisplay::ProcessRx() {
           if (vp == 0x14 /*PIC_Now*/) {
             const uint16_t screen_id = tmp[3] << 8 | tmp[4];
 
-            // In the code below DGUSLCD_SCREEN_BOOT acts as a sentinel
-            if (screen_id == 255) {
-              // DGUS OS sometimes randomly sends 255 back as an answer. Possible buffer overrun?
-              ReadCurrentScreen(); // Request again
-            } else if (displayRequest != DGUSLCD_SCREEN_BOOT && screen_id != displayRequest) {
-              // A display was requested. If the screen didn't yet switch to that display, we won't give that value back, otherwise the code gets confused.
-              // The DWIN display mostly honours the PIC_SET requests from the firmware, so after a while we may want to nudge it to the correct screen
-              DEBUG_ECHOPAIR(" Got a response on the current screen: ", screen_id);
-              DEBUG_ECHOLNPAIR(" - however, we've requested screen ", displayRequest);
-            } else {
-              displayRequest = DGUSLCD_SCREEN_BOOT;
-
-              if (current_screen_update_callback != nullptr) {
-                current_screen_update_callback(static_cast<DGUSLCD_Screens>(screen_id));
-              }
-            }
+            // A display was requested. If the screen didn't yet switch to that display, we won't give that value back, otherwise the code gets confused.
+            // The DWIN display mostly honours the PIC_SET requests from the firmware, so after a while we may want to nudge it to the correct screen
+            DEBUG_ECHOPAIR(" Got a response on the current screen: ", screen_id);
+            DEBUG_ECHOLNPAIR(" - however, we've requested screen ", displayRequest);
+            UNUSED(screen_id);
           } else {
             //const uint8_t dlen = tmp[2] << 1;  // Convert to Bytes. (Display works with words)
             //DEBUG_ECHOPAIR(" vp=", vp, " dlen=", dlen);
@@ -259,9 +264,6 @@ void DGUSDisplay::ProcessRx() {
             }
             else
               DEBUG_ECHOLNPAIR(" VPVar not found:", vp);
-
-            // Always ask for a screen update so we can send a screen update earlier, this prevents a flash of unstyled screen
-            ReadCurrentScreen();
           }
 
           rx_datagram_state = DGUS_IDLE;
@@ -306,8 +308,25 @@ void DGUSDisplay::RequestScreen(DGUSLCD_Screens screen) {
   WriteVariable(0x84, gotoscreen, sizeof(gotoscreen));
 }
 
-void DGUSDisplay::ReadCurrentScreen() {
-  ReadVariable(0x14 /*PIC_NOW*/);
+void DGUSDisplay::SetTouchScreenConfiguration(bool enable_standby, bool enable_sound, uint8_t standby_brightness) {
+  // Main configuration (System_Config)
+  unsigned char cfg_bits = 0x0;
+  cfg_bits |= 1UL << 5; // 5: load 22 touch file
+  cfg_bits |= 1UL << 4; // 4: auto-upload should always be enabled
+  if (enable_sound) cfg_bits |= 1UL << 3; // 3: audio
+  if (enable_standby) cfg_bits |= 1UL << 2; // 2: backlight on standby
+  cfg_bits |= 1UL << 1; // 1 & 0: 270 degrees orientation of display
+  cfg_bits |= 1UL << 0; 
+
+  DEBUG_ECHOLNPAIR("Update touch screen config - standby ", enable_standby);
+  DEBUG_ECHOLNPAIR("Update touch screen config - sound ", enable_sound);
+
+  const unsigned char config_set[] = { 0x5A, 0x00, (unsigned char) (cfg_bits >> 8U), (unsigned char) (cfg_bits & 0xFFU) };
+  WriteVariable(0x80 /*System_Config*/, config_set, sizeof(config_set));
+
+  // Standby brightness (LED_Config)
+  const unsigned char brightness_set[] = { 100 /*% active*/,  standby_brightness /*% standby*/ };
+  WriteVariable(0x82 /*LED_Config*/, brightness_set, sizeof(brightness_set));
 }
 
 rx_datagram_state_t DGUSDisplay::rx_datagram_state = DGUS_IDLE;
